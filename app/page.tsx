@@ -1,0 +1,165 @@
+import Link from "next/link"
+import { createClient } from "@/utils/supabase/server"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { ShoppingBag, Users, Package, TrendingUp } from "lucide-react"
+import type { DashboardStats } from "@/lib/types"
+
+async function getDashboardStats(): Promise<DashboardStats> {
+  const supabase = await createClient()
+
+  const { data: products } = await supabase.from("products").select("category, enabled")
+
+  if (!products) {
+    return {
+      totalProducts: 0,
+      totalMenProducts: 0,
+      totalWomenProducts: 0,
+      totalEnabledProducts: 0,
+    }
+  }
+
+  return {
+    totalProducts: products.length,
+    totalMenProducts: products.filter((p) => p.category === "men").length,
+    totalWomenProducts: products.filter((p) => p.category === "women").length,
+    totalEnabledProducts: products.filter((p) => p.enabled).length,
+  }
+}
+
+export default async function HomePage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const stats = await getDashboardStats()
+
+  const { data: recentProducts } = await supabase
+    .from("products")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5)
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center">
+              <ShoppingBag className="h-8 w-8 text-blue-600" />
+              <h1 className="ml-2 text-2xl font-bold text-gray-900">ProductHub</h1>
+            </div>
+            <div className="flex space-x-4">
+              {user ? (
+                <Link href="/dashboard">
+                  <Button>Go to Dashboard</Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/auth/sign-in">
+                    <Button variant="outline">Sign In</Button>
+                  </Link>
+                  <Link href="/auth/sign-up">
+                    <Button>Sign Up</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Product Management Dashboard</h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Manage your product inventory with ease. Track products, categories, and status all in one place.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProducts}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Men's Products</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalMenProducts}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Women's Products</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalWomenProducts}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Enabled Products</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalEnabledProducts}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {recentProducts && recentProducts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Products</CardTitle>
+              <CardDescription>Latest products added to the system</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={product.category === "men" ? "default" : "secondary"}>
+                          {product.category === "men" ? "Men's" : "Women's"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={product.enabled ? "default" : "secondary"}>
+                          {product.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(product.created_at).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
