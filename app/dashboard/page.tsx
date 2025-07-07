@@ -7,7 +7,16 @@ import type { DashboardStats } from "@/lib/types"
 async function getDashboardStats(userId: string): Promise<DashboardStats> {
   const supabase = await createClient()
 
-  const { data: products } = await supabase.from("products").select("category, enabled").eq("user_id", userId)
+  const { data: products } = await supabase
+    .from("products")
+    .select(`
+      category_id,
+      enabled,
+      categories (
+        name
+      )
+    `)
+    .eq("user_id", userId)
 
   if (!products) {
     return {
@@ -20,8 +29,8 @@ async function getDashboardStats(userId: string): Promise<DashboardStats> {
 
   return {
     totalProducts: products.length,
-    totalMenProducts: products.filter((p) => p.category === "men").length,
-    totalWomenProducts: products.filter((p) => p.category === "women").length,
+    totalMenProducts: products.filter((p) => p.categories?.name === "men").length,
+    totalWomenProducts: products.filter((p) => p.categories?.name === "women").length,
     totalEnabledProducts: products.filter((p) => p.enabled).length,
   }
 }

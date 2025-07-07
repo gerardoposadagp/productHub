@@ -15,7 +15,7 @@ export async function createProduct(formData: FormData) {
     user_id: user.id,
     name: formData.get("name") as string,
     description: formData.get("description") as string,
-    category: formData.get("category") as "men" | "women",
+    category_id: Number.parseInt(formData.get("category_id") as string),
     enabled: formData.get("enabled") === "true",
   }
 
@@ -39,7 +39,7 @@ export async function updateProduct(id: string, formData: FormData) {
   const updates = {
     name: formData.get("name") as string,
     description: formData.get("description") as string,
-    category: formData.get("category") as "men" | "women",
+    category_id: Number.parseInt(formData.get("category_id") as string),
     enabled: formData.get("enabled") === "true",
     updated_at: new Date().toISOString(),
   }
@@ -68,4 +68,16 @@ export async function deleteProduct(id: string) {
   }
 
   revalidatePath("/products")
+}
+
+export async function getCategories() {
+  const supabase = await createClient()
+
+  const { data: categories, error } = await supabase.from("categories").select("*").order("name")
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return categories
 }

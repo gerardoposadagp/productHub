@@ -10,7 +10,13 @@ import type { DashboardStats } from "@/lib/types"
 async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient()
 
-  const { data: products } = await supabase.from("products").select("category, enabled")
+  const { data: products } = await supabase.from("products").select(`
+      category_id,
+      enabled,
+      categories (
+        name
+      )
+    `)
 
   if (!products) {
     return {
@@ -23,8 +29,8 @@ async function getDashboardStats(): Promise<DashboardStats> {
 
   return {
     totalProducts: products.length,
-    totalMenProducts: products.filter((p) => p.category === "men").length,
-    totalWomenProducts: products.filter((p) => p.category === "women").length,
+    totalMenProducts: products.filter((p) => p.categories?.name === "men").length,
+    totalWomenProducts: products.filter((p) => p.categories?.name === "women").length,
     totalEnabledProducts: products.filter((p) => p.enabled).length,
   }
 }
@@ -38,7 +44,12 @@ export default async function HomePage() {
 
   const { data: recentProducts } = await supabase
     .from("products")
-    .select("*")
+    .select(`
+      *,
+      categories (
+        name
+      )
+    `)
     .order("created_at", { ascending: false })
     .limit(5)
 
@@ -142,8 +153,8 @@ export default async function HomePage() {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>
-                        <Badge variant={product.category === "men" ? "default" : "secondary"}>
-                          {product.category === "men" ? "Men's" : "Women's"}
+                        <Badge variant={product.categories?.name === "men" ? "default" : "secondary"}>
+                          {product.categories?.name === "men" ? "Men's" : "Women's"}
                         </Badge>
                       </TableCell>
                       <TableCell>
